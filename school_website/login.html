@@ -1,0 +1,180 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>DCSA School Login</title>
+
+    <!-- Keep your original CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="login-body">
+
+    <div class="login-container">
+
+        <!-- SCHOOL LOGO -->
+        <div class="school-logo">
+            <img src="imgs.jpg" alt="School Logo">
+        </div>
+
+        <!-- TITLE -->
+        <h1>School Login</h1>
+
+        <p class="login-subtitle">
+            Sign in to your account
+        </p>
+
+        <!-- ERROR / SUCCESS MESSAGE -->
+        <div
+            id="message"
+            class="error-message"
+            role="status"
+            aria-live="polite"
+        ></div>
+
+        <!-- LOGIN FORM -->
+        <form
+            id="loginForm"
+            action="login_process.php"
+            method="POST"
+        >
+
+            <!-- USERNAME -->
+            <div class="form-group">
+                <label for="username">Username</label>
+
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    placeholder="Enter your username"
+                    autocomplete="username"
+                    required
+                >
+            </div>
+
+            <!-- PASSWORD -->
+            <div class="form-group">
+                <label for="password">Password</label>
+
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                    required
+                >
+            </div>
+
+            <!-- SHOW PASSWORD -->
+        
+<div class="password-toggle"
+     style="display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 8px;
+            width: 100%;
+            margin-bottom: 20px;
+            text-align: left;">
+
+    <input
+        type="checkbox"
+        id="showPassword"
+        style="width: auto; margin: 0;"
+    >
+
+    <label
+        for="showPassword"
+        style="margin: 0; cursor: pointer;"
+    >
+        Show Password
+    </label>
+
+</div>
+
+
+            <!-- LOGIN BUTTON -->
+            <button type="submit" class="main-button">
+                Login
+            </button>
+
+        </form>
+
+        <!-- REGISTER -->
+        <p class="register-link">
+            Don't have an account?
+            <a href="register.html">Create an Account</a>
+        </p>
+
+        <!-- BACK TO HOME -->
+        <p class="back-home">
+            <a href="index.html">← Back to Home</a>
+        </p>
+
+    </div>
+
+    <script>
+        // SHOW / HIDE PASSWORD
+        const showPassword =
+            document.getElementById("showPassword");
+
+        const password =
+            document.getElementById("password");
+
+        showPassword.addEventListener("change", function () {
+            password.type = this.checked ? "text" : "password";
+        });
+
+        // DISPLAY URL MESSAGES
+        const params = new URLSearchParams(
+            window.location.search
+        );
+
+        const message = document.getElementById("message");
+
+        function showMessage(text, type) {
+            message.textContent = text;
+
+            message.style.display = "block";
+            message.style.padding = "12px";
+            message.style.marginBottom = "15px";
+            message.style.borderRadius = "8px";
+
+            if (type === "success") {
+                message.style.background = "#d1fae5";
+                message.style.color = "#166534";
+            } else {
+                message.style.background = "#fee2e2";
+                message.style.color = "#991b1b";
+            }
+        }
+
+        const errorMessages = {
+            empty: "Please enter your username and password.",
+            invalid: "Invalid username or password.",
+            role: "Invalid account role.",
+            database: "A database error occurred. Please try again."
+        };
+
+        const error = params.get("error");
+
+        if (error && errorMessages[error]) {
+            showMessage(errorMessages[error], "error");
+        }
+
+        if (params.get("registered") === "success") {
+            showMessage(
+                "Account registered successfully! You can now log in.",
+                "success"
+            );
+        }
+    </script>
+
+</body>
+</html>

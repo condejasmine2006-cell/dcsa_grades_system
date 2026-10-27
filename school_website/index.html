@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>School Website</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<div id="successMessage" class="success-message">
+    ✓ Account registered successfully! You can now log in.
+</div>
+
+<script>
+
+    const params =
+        new URLSearchParams(window.location.search);
+
+    if (params.get("registered") === "success") {
+
+        document.getElementById(
+            "successMessage"
+        ).style.display = "block";
+
+    }
+
+</script>
+
+<body>
+
+    <header>
+        <div class="logo">
+            My School
+        </div>
+
+        <nav>
+            <a href="#about">About</a>
+            <a href="login.html" class="login-btn">Login</a>
+        </nav>
+    </header>
+
+
+    <section class="hero">
+
+        <div class="hero-content">
+
+            <h1>
+                DATAMEX COLLEGE OF SAINT ADELINE
+            </h1>
+
+            <p>
+                Learning today, leading tomorrow.
+            </p>
+
+        
+
+        </div>
+
+    </section>
+
+
+    <section id="about" class="section">
+
+
+
+    </section>
+
+
+    <section id="about school" class="section gray">
+
+        <h2>About Our School</h2>
+
+        <div class="cards">
+
+            <div class="card">
+                <h3>Mission</h3>
+                <p>
+                    To continue its commitment in providing effective tools of learning
+                    so as to produce quality graduates that can go global in their
+                    chosen field of careeer.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>Vision</h3>
+                <p>
+                    To mold the students to become worthy citizens and responsible
+                    highly technical skilled leaders and educators of new nation
+                    with thoughs on value of education.
+                </p>
+            </div>
+
+
+        </div>
+
+    </section>
+
+
+    <footer>
+
+        <p>
+            © 2026 My School. All Rights Reserved.
+        </p>
+
+    </footer>
+
+</body>
+
+</html>

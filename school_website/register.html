@@ -1,0 +1,1108 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Student Registration | DATAMEX COLLEGE OF SAINT ADELINE</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            background: #eef4fb;
+            color: #17324d;
+            padding: 30px 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 950px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 35px 45px 45px;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.10);
+        }
+
+        /* ==========================================
+           HEADER
+        ========================================== */
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header img {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+            margin-bottom: 12px;
+        }
+
+        .header h1 {
+            color: #164b83;
+            font-size: 32px;
+            margin-bottom: 5px;
+        }
+
+        .school-name {
+            color: #555;
+            font-size: 17px;
+        }
+
+        /* ==========================================
+           NOTICE
+        ========================================== */
+
+        .notice {
+            background: #edf6ff;
+            border-left: 5px solid #164b83;
+            padding: 14px 15px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+            color: #333;
+            font-size: 15px;
+        }
+
+        /* ==========================================
+           SECTIONS
+        ========================================== */
+
+        .section {
+            margin-bottom: 35px;
+        }
+
+        .section-title {
+            color: #164b83;
+            font-size: 21px;
+            font-weight: bold;
+            padding-bottom: 9px;
+            border-bottom: 2px solid #164b83;
+            margin-bottom: 20px;
+        }
+
+        /* ==========================================
+           GRID
+        ========================================== */
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 18px;
+        }
+
+        .full {
+            grid-column: 1 / -1;
+        }
+
+        /* ==========================================
+           FORM
+        ========================================== */
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            color: #17324d;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        .required {
+            color: #d93025;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 13px 14px;
+            border: 1px solid #ccd7e3;
+            border-radius: 8px;
+            background: #ffffff;
+            color: #222;
+            font-size: 15px;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: #164b83;
+            box-shadow: 0 0 0 2px rgba(22, 75, 131, 0.10);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 90px;
+        }
+
+        /* ==========================================
+           STUDENT NUMBER
+        ========================================== */
+
+        .student-number {
+            background: #f5f9fd;
+            border: 2px solid #164b83;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        .field-note {
+            display: block;
+            margin-top: 6px;
+            font-size: 12px;
+            color: #777;
+        }
+
+        /* ==========================================
+           RADIO BUTTONS
+        ========================================== */
+
+        .radio-group {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+            padding-top: 7px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .radio-option input {
+            width: auto;
+            margin: 0;
+            accent-color: #164b83;
+        }
+
+        /* ==========================================
+           SUBMIT BUTTON
+        ========================================== */
+
+        .submit-button {
+            width: 100%;
+            border: none;
+            background: #164b83;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .submit-button:hover {
+            background: #103b69;
+        }
+
+        /* ==========================================
+           LOGIN
+        ========================================== */
+
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+        }
+
+        .login-link a {
+            color: #164b83;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+
+        /* ==========================================
+           MOBILE
+        ========================================== */
+
+        @media (max-width: 750px) {
+
+            body {
+                padding: 15px;
+            }
+
+            .container {
+                padding: 25px 20px 30px;
+            }
+
+            .grid-2,
+            .grid-3 {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+
+            .full {
+                grid-column: auto;
+            }
+
+            .header h1 {
+                font-size: 27px;
+            }
+
+            .radio-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+
+    <!-- ==========================================
+         HEADER
+    ========================================== -->
+
+    <div class="header">
+
+        <img
+            src="imgs.jpg"
+            alt="DCSA Logo"
+        >
+
+        <h1>
+            Student Registration
+        </h1>
+
+        <div class="school-name">
+            DATAMEX COLLEGE OF SAINT ADELINE
+        </div>
+
+    </div>
+
+
+    <!-- ==========================================
+         NOTICE
+    ========================================== -->
+
+    <div class="notice">
+
+        Please provide your correct and complete information.
+        This registration form is for <strong>students only</strong>.
+        Teacher and Administrator accounts are created by the
+        <strong>Administrator</strong>.
+
+    </div>
+
+
+    <!-- ==========================================
+         REGISTRATION FORM
+    ========================================== -->
+
+    <form
+        action="register.php"
+        method="POST"
+        autocomplete="off"
+    >
+
+
+        <!-- ======================================
+             STUDENT INFORMATION
+        ====================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                Student Information
+            </div>
+
+
+            <!-- STUDENT NUMBER -->
+
+            <div class="form-group">
+
+                <label for="student_number">
+                    Student Number <span class="required">*</span>
+                </label>
+
+                <input
+                    type="text"
+                    id="student_number"
+                    name="student_number"
+                    class="student-number"
+                    placeholder="Enter official student number"
+                    maxlength="30"
+                    required
+                >
+
+                <span class="field-note">
+                    Enter the official student number provided by the school.
+                </span>
+
+            </div>
+
+
+            <div class="grid-2">
+
+
+                <!-- STUDENT STATUS -->
+
+                <div class="form-group">
+
+                    <label>
+                        Student Status <span class="required">*</span>
+                    </label>
+
+                    <div class="radio-group">
+
+                        <label class="radio-option">
+
+                            <input
+                                type="radio"
+                                name="student_status"
+                                value="NEW"
+                                required
+                            >
+
+                            New Student
+
+                        </label>
+
+
+                        <label class="radio-option">
+
+                            <input
+                                type="radio"
+                                name="student_status"
+                                value="OLD"
+                            >
+
+                            Old Student
+
+                        </label>
+
+                    </div>
+
+                </div>
+
+
+                <!-- STUDENT TYPE -->
+
+                <div class="form-group">
+
+                    <label for="student_type">
+                        Student Type <span class="required">*</span>
+                    </label>
+
+                    <select
+                        id="student_type"
+                        name="student_type"
+                        required
+                    >
+
+                        <option value="">
+                            -- Select Student Type --
+                        </option>
+
+                        <option value="REGULAR">
+                            Regular
+                        </option>
+
+                        <option value="IRREGULAR">
+                            Irregular
+                        </option>
+
+                    </select>
+
+                    <span class="field-note">
+                        Select Irregular if the student has back subjects
+                        or is not following the regular subject sequence.
+                    </span>
+
+                </div>
+
+
+                <!-- SEMESTER -->
+
+                <div class="form-group">
+
+                    <label for="semester">
+                        Semester <span class="required">*</span>
+                    </label>
+
+                    <select
+                        id="semester"
+                        name="semester"
+                        required
+                    >
+
+                        <option value="">
+                            -- Select Semester --
+                        </option>
+
+                        <option value="1st">
+                            1st Semester
+                        </option>
+
+                        <option value="2nd">
+                            2nd Semester
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- PROGRAM -->
+
+                <div class="form-group">
+
+                    <label for="program">
+                        Program <span class="required">*</span>
+                    </label>
+
+                    <select
+                        id="program"
+                        name="program"
+                        required
+                    >
+
+                        <option value="">
+                            -- Select Program --
+                        </option>
+
+                        <option value="BSIT">
+                            BSIT
+                        </option>
+
+                       
+
+                    </select>
+
+                </div>
+
+
+                <!-- YEAR LEVEL -->
+
+                <div class="form-group">
+
+                    <label for="year_level">
+                        Year Level <span class="required">*</span>
+                    </label>
+
+                    <select
+                        id="year_level"
+                        name="year_level"
+                        required
+                    >
+
+                        <option value="">
+                            -- Select Year Level --
+                        </option>
+
+                        <option value="1st Year">
+                            1st Year
+                        </option>
+
+                        <option value="2nd Year">
+                            2nd Year
+                        </option>
+
+                        <option value="3rd Year">
+                            3rd Year
+                        </option>
+
+                        <option value="4th Year">
+                            4th Year
+                        </option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ======================================
+             PERSONAL INFORMATION
+        ====================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                Personal Information
+            </div>
+
+
+            <div class="grid-3">
+
+
+                <!-- FIRST NAME -->
+
+                <div class="form-group">
+
+                    <label for="first_name">
+                        First Name <span class="required">*</span>
+                    </label>
+
+                    <input
+                        type="text"
+                        id="first_name"
+                        name="first_name"
+                        placeholder="Enter first name"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- MIDDLE NAME -->
+
+                <div class="form-group">
+
+                    <label for="middle_name">
+                        Middle Name
+                    </label>
+
+                    <input
+                        type="text"
+                        id="middle_name"
+                        name="middle_name"
+                        placeholder="Enter middle name"
+                    >
+
+                </div>
+
+
+                <!-- LAST NAME -->
+
+                <div class="form-group">
+
+                    <label for="last_name">
+                        Last Name <span class="required">*</span>
+                    </label>
+
+                    <input
+                        type="text"
+                        id="last_name"
+                        name="last_name"
+                        placeholder="Enter last name"
+                        required
+                    >
+
+                </div>
+
+            </div>
+
+
+            <div class="grid-2">
+
+
+                <!-- EXTENSION NAME -->
+
+                <div class="form-group">
+
+                    <label for="extension_name">
+                        Extension Name
+                    </label>
+
+                    <select
+                        id="extension_name"
+                        name="extension_name"
+                    >
+
+                        <option value="">
+                            -- None --
+                        </option>
+
+                        <option value="Jr.">
+                            Jr.
+                        </option>
+
+                        <option value="I">
+                            I
+                        </option>
+
+                        <option value="II">
+                            II
+                        </option>
+
+                        <option value="III">
+                            III
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- BIRTHDATE -->
+
+                <div class="form-group">
+
+                    <label for="birthdate">
+                        Birthdate <span class="required">*</span>
+                    </label>
+
+                    <input
+                        type="date"
+                        id="birthdate"
+                        name="birthdate"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- GENDER -->
+
+                <div class="form-group">
+
+                    <label for="gender">
+                        Gender <span class="required">*</span>
+                    </label>
+
+                    <select
+                        id="gender"
+                        name="gender"
+                        required
+                    >
+
+                        <option value="">
+                            -- Select Gender --
+                        </option>
+
+                        <option value="Male">
+                            Male
+                        </option>
+
+                        <option value="Female">
+                            Female
+                        </option>
+
+                       
+
+                    </select>
+
+                </div>
+
+
+                <!-- CONTACT NUMBER -->
+
+                <div class="form-group">
+
+                    <label for="contact_number">
+                        Contact Number <span class="required">*</span>
+                    </label>
+
+                    <input
+                        type="tel"
+                        id="contact_number"
+                        name="contact_number"
+                        placeholder="09XXXXXXXXX"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- HOME ADDRESS -->
+
+                <div class="form-group full">
+
+                    <label for="home_address">
+                        Home Address <span class="required">*</span>
+                    </label>
+
+                    <textarea
+                        id="home_address"
+                        name="home_address"
+                        placeholder="Enter complete home address"
+                        required
+                    ></textarea>
+
+                </div>
+
+
+                <!-- CITY -->
+
+                <div class="form-group">
+
+                    <label for="city">
+                        City <span class="required">*</span>
+                    </label>
+
+                    <input
+                        type="text"
+                        id="city"
+                        name="city"
+                        placeholder="Enter city"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- BARANGAY -->
+
+                <div class="form-group">
+
+                    <label for="barangay">
+                        Barangay <span class="required">*</span>
+                    </label>
+
+                    <input
+                        type="text"
+                        id="barangay"
+                        name="barangay"
+                        placeholder="Enter barangay"
+                        required
+                    >
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ======================================
+             EDUCATIONAL INFORMATION
+        ====================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                Educational Information
+            </div>
+
+
+            <div class="grid-2">
+
+
+                <!-- SCHOOL LAST ATTENDED -->
+
+                <div class="form-group">
+
+                    <label for="school_last_attended">
+                        School Last Attended
+                        <span class="required">*</span>
+                    </label>
+
+                    <input
+                        type="text"
+                        id="school_last_attended"
+                        name="school_last_attended"
+                        placeholder="Enter previous school"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- COURSE -->
+
+                <div class="form-group">
+
+                    <label for="previous_course">
+                        Course <span class="required">*</span>
+                    </label>
+
+                    <input
+                        type="text"
+                        id="previous_course"
+                        name="previous_course"
+                        placeholder="Enter previous course"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- SCHOOL ADDRESS -->
+
+                <div class="form-group full">
+
+                    <label for="school_address">
+                        School Address <span class="required">*</span>
+                    </label>
+
+                    <textarea
+                        id="school_address"
+                        name="school_address"
+                        placeholder="Enter address of previous school"
+                        required
+                    ></textarea>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ======================================
+             PARENT / GUARDIAN INFORMATION
+        ====================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                Parent / Guardian Information
+            </div>
+
+
+            <div class="grid-2">
+
+
+                <!-- GUARDIAN NAME -->
+
+                <div class="form-group">
+
+                    <label for="guardian_name">
+                        Parents/Guardian Name
+                        <span class="required">*</span>
+                    </label>
+
+                    <input
+                        type="text"
+                        id="guardian_name"
+                        name="guardian_name"
+                        placeholder="Enter parent/guardian name"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- GUARDIAN CONTACT -->
+
+                <div class="form-group">
+
+                    <label for="guardian_contact_number">
+                        Contact Number
+                        <span class="required">*</span>
+                    </label>
+
+                    <input
+                        type="tel"
+                        id="guardian_contact_number"
+                        name="guardian_contact_number"
+                        placeholder="09XXXXXXXXX"
+                        required
+                    >
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ======================================
+             ACCOUNT INFORMATION
+        ====================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                Account Information
+            </div>
+
+
+            <div class="grid-2">
+
+
+                <!-- USERNAME -->
+
+                <div class="form-group">
+
+                    <label for="username">
+                        Username <span class="required">*</span>
+                    </label>
+
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        placeholder="Create username"
+                        minlength="4"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- EMAIL -->
+
+                <div class="form-group">
+
+                    <label for="email">
+                        Email <span class="required">*</span>
+                    </label>
+
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="example@email.com"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- PASSWORD -->
+
+                <div class="form-group">
+
+                    <label for="password">
+                        Password <span class="required">*</span>
+                    </label>
+
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="At least 8 characters"
+                        minlength="8"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- CONFIRM PASSWORD -->
+
+                <div class="form-group">
+
+                    <label for="confirm_password">
+                        Confirm Password
+                        <span class="required">*</span>
+                    </label>
+
+                    <input
+                        type="password"
+                        id="confirm_password"
+                        name="confirm_password"
+                        placeholder="Enter password again"
+                        minlength="8"
+                        required
+                    >
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ======================================
+             SUBMIT
+        ====================================== -->
+
+        <button
+            type="submit"
+            class="submit-button"
+        >
+            Create Student Account
+        </button>
+
+
+        <div class="login-link">
+
+            Already have an account?
+
+            <a href="login.html">
+                Login
+            </a>
+
+        </div>
+
+
+    </form>
+
+</div>
+
+
+<script>
+
+    const form = document.querySelector("form");
+
+    form.addEventListener("submit", function(event) {
+
+        const password =
+            document.getElementById("password").value;
+
+        const confirmPassword =
+            document.getElementById("confirm_password").value;
+
+
+        if (password !== confirmPassword) {
+
+            event.preventDefault();
+
+            alert("Passwords do not match.");
+
+            document
+                .getElementById("confirm_password")
+                .focus();
+
+            return;
+
+        }
+
+
+        if (password.length < 8) {
+
+            event.preventDefault();
+
+            alert("Password must be at least 8 characters.");
+
+            document
+                .getElementById("password")
+                .focus();
+
+            return;
+
+        }
+
+    });
+
+</script>
+
+</body>
+
+</html>
