@@ -1,565 +1,649 @@
 
 <?php
+session_start();
+require_once __DIR__ . "/db_connect.php";
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+
 /* =========================================
-   DCSA GRADING SYSTEM
-   REGISTRAR DASHBOARD
+   REGISTRAR ACCESS
 ========================================= */
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-/* REGISTRAR ACCESS CHECK */
-
-$userRole = strtolower(trim($_SESSION["role"] ?? ""));
-
-if (
-    !isset($_SESSION["user_id"]) ||
-    $userRole !== "registrar"
-) {
+if (!isset($_SESSION["user_id"])) {
     header("Location: login.html");
-    exit();
+    exit;
 }
 
-/* DATABASE CONNECTION */
+$role = strtolower(trim(
+    $_SESSION["role"] ?? $_SESSION["user_role"] ?? ""
+));
 
-$conn = new mysqli(
-    "localhost",
-    "root",
-    "",
-    "dcsa_grades"
+if ($role !== "registrar") {
+    http_response_code(403);
+    exit("Access denied. Registrar account required.");
+}
+
+/* =========================================
+   CSRF PROTECTION
+========================================= */
+
+if (empty($_SESSION["csrf_token"])) {
+    $_SESSION["csrf_token"] = bin2hex(random_bytes(32));
+}
+
+$message = "";
+$error = "";
+
+/* =========================================
+   VERIFY OR RETURN GRADES
+========================================= */
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $token = $_POST["csrf_token"] ?? "";
+    $gradeId = filter_input(
+        INPUT_POST,
+        "grade_id",
+        FILTER_VALIDATE_INT
+    );
+    $action = $_POST["action"] ?? "";
+
+    if (!is_string($token) ||
+        !hash_equals($_SESSION["csrf_token"], $token)) {
+        $error = "Invalid request. Please refresh the page.";
+    } elseif (!$gradeId || !in_array(
+        $action,
+        ["verify", "return"],
+        true
+    )) {
+        $error = "Invalid grade review request.";
+    } else {
+        $newStatus = $action === "verify"
+            ? "Verified"
+            : "Needs Correction";
+
+        $stmt = $conn->prepare(
+            "UPDATE grades
+             SET registrar_status = ?
+             WHERE id = ?"
+        );
+
+        $stmt->bind_param("si", $newStatus, $gradeId);
+        $stmt->execute();
+
+        if ($stmt->affected_rows >= 0) {
+            $message = "Grade review status updated to "
+                     . $newStatus . ".";
+        }
+
+        $stmt->close();
+    }
+}
+
+/* =========================================
+   SEARCH
+========================================= */
+
+$search = trim($_GET["search"] ?? "");
+$searchLike = "%" . $search . "%";
+
+/* =========================================
+   MAIN ACADEMIC RECORD QUERY
+========================================= */
+
+$sql = "
+    SELECT
+        g.id AS grade_id,
+        s.student_id AS student_number,
+        s.first_name,
+        s.last_name,
+        sub.subject_code,
+        sub.subject_name,
+        sub.school_year,
+        sec.section_name,
+        g.prelim,
+        g.midterm,
+        g.pre_final,
+        g.final_grade,
+        g.average,
+        g.remarks,
+        COALESCE(g.registrar_status, 'Pending')
+            AS registrar_status
+    FROM grades g
+    INNER JOIN student_subjects ss
+        ON ss.id = g.student_subject_id
+    INNER JOIN students s
+        ON s.id = ss.student_id
+    INNER JOIN subjects sub
+        ON sub.id = ss.subject_id
+    LEFT JOIN sections sec
+        ON sec.id = ss.section_id
+    WHERE (
+        s.student_id LIKE ?
+        OR s.first_name LIKE ?
+        OR s.last_name LIKE ?
+        OR sub.subject_code LIKE ?
+        OR sub.subject_name LIKE ?
+    )
+    ORDER BY s.last_name, s.first_name, sub.subject_code
+";
+
+$stmt = $conn->prepare($sql);
+$stmt->bind_param(
+    "sssss",
+    $searchLike,
+    $searchLike,
+    $searchLike,
+    $searchLike,
+    $searchLike
 );
+$stmt->execute();
+$result = $stmt->get_result();
 
-if ($conn->connect_error) {
-    die("Database connection failed.");
+$records = [];
+
+while ($row = $result->fetch_assoc()) {
+    $records[] = $row;
 }
 
-$conn->set_charset("utf8mb4");
+$stmt->close();
 
-/* HELPER FUNCTION */
+/* =========================================
+   EXPORT ACADEMIC REPORT TO CSV
+========================================= */
 
-function e($value) {
+if (isset($_GET["export"]) && $_GET["export"] === "csv") {
+    header("Content-Type: text/csv; charset=UTF-8");
+    header(
+        'Content-Disposition: attachment; filename="academic_report.csv"'
+    );
+
+    $output = fopen("php://output", "w");
+
+    // UTF-8 BOM for Excel compatibility
+    fwrite($output, "\xEF\xBB\xBF");
+
+    fputcsv($output, [
+        "Student Number",
+        "Student Name",
+        "Subject Code",
+        "Subject Name",
+        "Section",
+        "School Year",
+        "Prelim",
+        "Midterm",
+        "Pre-Final",
+        "Final Grade",
+        "GWA / Grade Result",
+        "Remarks",
+        "Registrar Status"
+    ]);
+
+    foreach ($records as $r) {
+        fputcsv($output, [
+            $r["student_number"],
+            $r["first_name"] . " " . $r["last_name"],
+            $r["subject_code"],
+            $r["subject_name"],
+            $r["section_name"] ?? "",
+            $r["school_year"],
+            $r["prelim"],
+            $r["midterm"],
+            $r["pre_final"],
+            $r["final_grade"],
+            $r["average"],
+            $r["remarks"],
+            $r["registrar_status"]
+        ]);
+    }
+
+    fclose($output);
+    exit;
+}
+
+/* =========================================
+   SUMMARY COUNTS
+========================================= */
+
+$totalRecords = count($records);
+$pending = 0;
+$verified = 0;
+$correction = 0;
+
+foreach ($records as $r) {
+    if ($r["registrar_status"] === "Verified") {
+        $verified++;
+    } elseif ($r["registrar_status"] === "Needs Correction") {
+        $correction++;
+    } else {
+        $pending++;
+    }
+}
+
+function h($value) {
     return htmlspecialchars(
         (string)($value ?? ""),
         ENT_QUOTES,
         "UTF-8"
     );
 }
-
-/* REGISTRAR NAME */
-
-$fullName = $_SESSION["full_name"] ?? "Registrar";
-
-/* COUNT STUDENTS */
-
-$totalStudents = 0;
-
-$result = $conn->query(
-    "SELECT COUNT(*) AS total
-     FROM users
-     WHERE LOWER(role) = 'student'"
-);
-
-if ($result) {
-    $totalStudents = (int)$result->fetch_assoc()["total"];
-}
-
-/* COUNT REGISTERED STUDENTS */
-
-$totalEnrolled = 0;
-
-$result = $conn->query(
-    "SELECT COUNT(*) AS total
-     FROM users
-     WHERE LOWER(role) = 'student'
-       AND LOWER(COALESCE(student_status, '')) = 'enrolled'"
-);
-
-if ($result) {
-    $totalEnrolled = (int)$result->fetch_assoc()["total"];
-}
-
-/* GET STUDENTS */
-
-$students = $conn->query(
-    "SELECT
-        id,
-        student_number,
-        full_name,
-        username,
-        course,
-        year_level,
-        student_type,
-        student_status
-     FROM users
-     WHERE LOWER(role) = 'student'
-     ORDER BY id DESC
-     LIMIT 20"
-);
-
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
-
-<title>Registrar Dashboard | DCSA</title>
+<title>Registrar Dashboard | DATAMEX COLLEGE OF SAINT ADELINE</title>
 
 <style>
-
 * {
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    font-family: Arial, sans-serif;
 }
 
 body {
-    background: #f4f7fb;
-    color: #222;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f4f2f7;
+    color: #292333;
 }
 
-/* SIDEBAR */
-
-.sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 240px;
-    height: 100vh;
-
-    background-image:
-        linear-gradient(
-            rgba(45, 25, 60, 0.70),
-            rgba(45, 25, 60, 0.70)
-        ),
-        url("school_building.png");
-
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-
+header {
+    background: #48265f;
     color: white;
-    padding: 30px 20px;
-    overflow-y: auto;
-    z-index: 1000;
+    padding: 24px;
 }
 
-.sidebar h2 {
-    margin-bottom: 35px;
-    font-size: 25px;
-    text-align: center;
+header h1 {
+    margin: 0 0 8px;
+    font-size: 23px;
 }
 
-.sidebar a {
-    display: block;
-    color: white;
-    text-decoration: none;
-    padding: 12px;
-    margin-bottom: 10px;
-    border-radius: 8px;
-    transition: 0.2s;
+header p {
+    margin: 0;
+    color: #eee4f5;
 }
 
-.sidebar a:hover,
-.sidebar a.active {
-    background: rgba(255,255,255,0.20);
+.container {
+    max-width: 1500px;
+    margin: auto;
+    padding: 24px;
 }
-
-.sidebar .logout {
-    position: absolute;
-    left: 20px;
-    right: 20px;
-    bottom: 25px;
-    background: #c0392b;
-    color: white;
-    text-align: center;
-    font-weight: bold;
-}
-
-.sidebar .logout:hover {
-    background: #a93226;
-}
-
-/* MAIN CONTENT */
-
-.main {
-    margin-left: 240px;
-    padding: 30px;
-    min-height: 100vh;
-}
-
-/* WELCOME */
-
-.topbar {
-    background: white;
-    padding: 25px;
-    border-radius: 12px;
-    margin-bottom: 25px;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.08);
-}
-
-.topbar h1 {
-    font-size: 30px;
-    margin-bottom: 5px;
-    color: #44275c;
-}
-
-.topbar p {
-    color: #666;
-}
-
-/* DASHBOARD CARDS */
 
 .cards {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
+    grid-template-columns: repeat(4, minmax(150px, 1fr));
+    gap: 16px;
+    margin-bottom: 25px;
 }
 
 .card {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
     background: white;
-    padding: 25px;
-    min-height: 180px;
-    border-radius: 12px;
-    border-left: 5px solid #44275c;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.08);
-    text-decoration: none;
-    color: #222;
-    transition: 0.2s;
-}
-
-.card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px #0000000d;
 }
 
 .card h3 {
-    margin-bottom: 10px;
-    color: #44275c;
+    font-size: 14px;
+    color: #6d6475;
+    margin: 0 0 12px;
+}
+
+.card strong {
+    font-size: 28px;
+    color: #48265f;
+}
+
+.panel {
+    background: white;
+    padding: 22px;
+    border-radius: 10px;
+    margin-bottom: 22px;
+    box-shadow: 0 2px 8px #0000000d;
+}
+
+.panel h2 {
+    margin-top: 0;
     font-size: 20px;
 }
 
-.card .number {
-    font-size: 32px;
-    font-weight: bold;
-    color: #44275c;
-    margin: 5px 0 10px;
+.search-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
 }
 
-.card p {
-    color: #666;
-    line-height: 1.5;
-    margin-bottom: 14px;
+input[type="text"] {
+    padding: 11px;
+    border: 1px solid #d8d1df;
+    border-radius: 6px;
+    min-width: 220px;
+    flex: 1;
 }
 
-.card-action {
-    margin-top: auto;
-    color: #44275c;
-    font-weight: bold;
+button, .btn {
+    display: inline-block;
+    border: none;
+    padding: 10px 13px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    text-decoration: none;
 }
 
-/* TABLE */
-
-.table-section {
-    background: white;
-    padding: 25px;
-    border-radius: 12px;
-    margin-bottom: 30px;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.08);
-    overflow-x: auto;
+.search-btn, .verify-btn {
+    background: #48265f;
+    color: white;
 }
 
-.table-section h2 {
-    color: #44275c;
-    margin-bottom: 20px;
+.return-btn {
+    background: #fff0dc;
+    color: #8a4a00;
+}
+
+.export-btn {
+    background: #e5f4e8;
+    color: #216638;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 850px;
+    min-width: 1150px;
+}
+
+th, td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #eee9f2;
+    text-align: left;
+    font-size: 13px;
+    vertical-align: middle;
 }
 
 th {
-    background: #44275c;
-    color: white;
-    padding: 13px;
-    text-align: left;
+    background: #f5f0f8;
+    color: #48265f;
 }
 
-td {
-    padding: 13px;
-    border-bottom: 1px solid #ddd;
-}
-
-tbody tr:hover {
-    background: #f8f5fa;
+.table-wrap {
+    overflow-x: auto;
 }
 
 .status {
     display: inline-block;
-    padding: 5px 10px;
-    background: #e8f8f0;
-    color: #16834b;
-    border-radius: 15px;
-    font-size: 13px;
+    border-radius: 20px;
+    padding: 5px 9px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.Pending {
+    background: #fff0c9;
+    color: #805600;
+}
+
+.Verified {
+    background: #dff5e5;
+    color: #176334;
+}
+
+.Correction {
+    background: #ffe2e2;
+    color: #a12222;
+}
+
+.notice {
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    background: #e5f4e8;
+    color: #216638;
+}
+
+.error {
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    background: #ffe2e2;
+    color: #a12222;
+}
+
+.actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 
 .empty {
+    padding: 25px;
     text-align: center;
-    color: #666;
-    padding: 20px;
+    color: #756b7d;
 }
 
-/* RESPONSIVE */
+footer {
+    text-align: center;
+    color: #756b7d;
+    padding: 20px;
+    font-size: 12px;
+}
 
-@media (max-width: 1100px) {
+@media (max-width: 800px) {
     .cards {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-}
 
-@media (max-width: 700px) {
-    .sidebar {
-        position: relative;
-        width: 100%;
-        height: auto;
-        padding-bottom: 25px;
-    }
-
-    .sidebar .logout {
-        position: static;
-        margin-top: 20px;
-    }
-
-    .main {
-        margin-left: 0;
-        padding: 15px;
-    }
-
-    .cards {
-        grid-template-columns: 1fr;
-    }
-
-    .topbar h1 {
-        font-size: 24px;
+    .container {
+        padding: 12px;
     }
 }
-
 </style>
-
 </head>
 
 <body>
 
-<!-- SIDEBAR -->
+<header>
+    <h1>Registrar Dashboard</h1>
+    <p>DATAMEX COLLEGE OF SAINT ADELINE</p>
+</header>
 
-<div class="sidebar">
+<main class="container">
 
-    <h2>Registrar Portal</h2>
+    <?php if ($message !== ""): ?>
+        <div class="notice"><?= h($message) ?></div>
+    <?php endif; ?>
 
-    <a href="registrar_dashboard.php" class="active">
-        Dashboard
-    </a>
+    <?php if ($error !== ""): ?>
+        <div class="error"><?= h($error) ?></div>
+    <?php endif; ?>
 
-    <a href="admin_enroll_students.php">
-        Student Enrollment
-    </a>
+    <!-- SUMMARY -->
 
-    <a href="admin_students.php">
-        Student Records
-    </a>
+    <section class="cards">
+        <div class="card">
+            <h3>Academic Records</h3>
+            <strong><?= $totalRecords ?></strong>
+        </div>
 
-    <a href="admin_reports.php">
-        Enrollment Reports
-    </a>
+        <div class="card">
+            <h3>Pending Review</h3>
+            <strong><?= $pending ?></strong>
+        </div>
 
-    <a
-        href="logout.php"
-        class="logout"
-        onclick="return confirm('Are you sure you want to logout?');"
-    >
-        Logout
-    </a>
+        <div class="card">
+            <h3>Verified Grades</h3>
+            <strong><?= $verified ?></strong>
+        </div>
 
-</div>
+        <div class="card">
+            <h3>Needs Correction</h3>
+            <strong><?= $correction ?></strong>
+        </div>
+    </section>
 
-<!-- MAIN CONTENT -->
+    <!-- ACADEMIC RECORDS AND REPORTS -->
 
-<div class="main">
+    <section class="panel">
+        <h2>Student Academic Records</h2>
 
-    <!-- WELCOME -->
+        <form method="GET" class="search-form">
+            <input
+                type="text"
+                name="search"
+                placeholder="Search student number, name, or subject"
+                value="<?= h($search) ?>"
+            >
 
-    <div class="topbar">
+            <button class="search-btn" type="submit">
+                Search Records
+            </button>
 
-        <h1>
-            Welcome, <?= e($fullName); ?>!
-        </h1>
+            <a
+                class="btn export-btn"
+                href="?<?= http_build_query([
+                    "search" => $search,
+                    "export" => "csv"
+                ]) ?>"
+            >
+                Export CSV Report
+            </a>
+        </form>
 
-        <p>
-            Registrar Dashboard
-        </p>
-
-    </div>
-
-    <!-- DASHBOARD CARDS -->
-
-    <div class="cards">
-
-        <a href="admin_students.php" class="card">
-
-            <h3>Total Students</h3>
-
-            <div class="number">
-                <?= $totalStudents; ?>
-            </div>
-
-            <p>
-                View registered student accounts.
-            </p>
-
-            <span class="card-action">
-                View Students →
-            </span>
-
-        </a>
-
-        <a href="admin_enroll_students.php" class="card">
-
-            <h3>Enrolled Students</h3>
-
-            <div class="number">
-                <?= $totalEnrolled; ?>
-            </div>
-
-            <p>
-                View students marked as enrolled.
-            </p>
-
-            <span class="card-action">
-                Manage Enrollment →
-            </span>
-
-        </a>
-
-        <a href="admin_reports.php" class="card">
-
-            <h3>Enrollment Reports</h3>
-
-            <p>
-                Review student enrollment and academic records.
-            </p>
-
-            <span class="card-action">
-                View Reports →
-            </span>
-
-        </a>
-
-        <a href="admin_enroll_students.php" class="card">
-
-            <h3>Enroll Students</h3>
-
-            <p>
-                Manage student enrollment in courses and sections.
-            </p>
-
-            <span class="card-action">
-                Enroll Now →
-            </span>
-
-        </a>
-
-        <a href="admin_students.php" class="card">
-
-            <h3>Student Records</h3>
-
-            <p>
-                View student information and academic details.
-            </p>
-
-            <span class="card-action">
-                View Records →
-            </span>
-
-        </a>
-
-    </div>
-
-    <!-- STUDENT RECORDS -->
-
-    <div class="table-section">
-
-        <h2>Student Records</h2>
-
+        <div class="table-wrap">
         <table>
-
             <thead>
                 <tr>
-                    <th>Student Number</th>
-                    <th>Full Name</th>
-                    <th>Username</th>
-                    <th>Course</th>
-                    <th>Year Level</th>
-                    <th>Student Type</th>
-                    <th>Status</th>
+                    <th>Student No.</th>
+                    <th>Student Name</th>
+                    <th>Subject</th>
+                    <th>Section</th>
+                    <th>Prelim</th>
+                    <th>Midterm</th>
+                    <th>Pre-Final</th>
+                    <th>Final</th>
+                    <th>GWA / Result</th>
+                    <th>Remarks</th>
+                    <th>Registrar Status</th>
+                    <th>Review Action</th>
                 </tr>
             </thead>
 
             <tbody>
-
-            <?php if ($students && $students->num_rows > 0): ?>
-
-                <?php while ($student = $students->fetch_assoc()): ?>
-
-                    <tr>
-                        <td><?= e($student["student_number"]); ?></td>
-                        <td><?= e($student["full_name"]); ?></td>
-                        <td><?= e($student["username"]); ?></td>
-                        <td><?= e($student["course"]); ?></td>
-                        <td><?= e($student["year_level"]); ?></td>
-                        <td><?= e($student["student_type"] ?? "Regular"); ?></td>
-                        <td>
-                            <?= e($student["student_status"] ?? "Pending"); ?>
-                        </td>
-                    </tr>
-
-                <?php endwhile; ?>
-
-            <?php else: ?>
-
+            <?php if (empty($records)): ?>
                 <tr>
-                    <td colspan="7" class="empty">
-                        No student records found.
+                    <td colspan="12" class="empty">
+                        No academic records found.
                     </td>
                 </tr>
+            <?php else: ?>
+
+                <?php foreach ($records as $r): ?>
+                    <?php
+                    $statusClass = "Pending";
+
+                    if ($r["registrar_status"] === "Verified") {
+                        $statusClass = "Verified";
+                    } elseif (
+                        $r["registrar_status"] === "Needs Correction"
+                    ) {
+                        $statusClass = "Correction";
+                    }
+                    ?>
+
+                    <tr>
+                        <td><?= h($r["student_number"]) ?></td>
+
+                        <td>
+                            <?= h($r["first_name"] . " " . $r["last_name"]) ?>
+                        </td>
+
+                        <td>
+                            <?= h($r["subject_code"]) ?>
+                            — <?= h($r["subject_name"]) ?>
+                        </td>
+
+                        <td><?= h($r["section_name"] ?? "N/A") ?></td>
+                        <td><?= h($r["prelim"]) ?></td>
+                        <td><?= h($r["midterm"]) ?></td>
+                        <td><?= h($r["pre_final"]) ?></td>
+                        <td><?= h($r["final_grade"]) ?></td>
+                        <td><?= h($r["average"]) ?></td>
+                        <td><?= h($r["remarks"]) ?></td>
+
+                        <td>
+                            <span class="status <?= $statusClass ?>">
+                                <?= h($r["registrar_status"]) ?>
+                            </span>
+                        </td>
+
+                        <td>
+                            <div class="actions">
+
+                                <form method="POST">
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="<?= h($_SESSION["csrf_token"]) ?>"
+                                    >
+                                    <input
+                                        type="hidden"
+                                        name="grade_id"
+                                        value="<?= (int)$r["grade_id"] ?>"
+                                    >
+                                    <input
+                                        type="hidden"
+                                        name="action"
+                                        value="verify"
+                                    >
+                                    <button
+                                        class="verify-btn"
+                                        type="submit"
+                                    >
+                                        Verify
+                                    </button>
+                                </form>
+
+                                <form method="POST">
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="<?= h($_SESSION["csrf_token"]) ?>"
+                                    >
+                                    <input
+                                        type="hidden"
+                                        name="grade_id"
+                                        value="<?= (int)$r["grade_id"] ?>"
+                                    >
+                                    <input
+                                        type="hidden"
+                                        name="action"
+                                        value="return"
+                                    >
+                                    <button
+                                        class="return-btn"
+                                        type="submit"
+                                    >
+                                        Return
+                                    </button>
+                                </form>
+
+                            </div>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
 
             <?php endif; ?>
-
             </tbody>
-
         </table>
+        </div>
+    </section>
 
-    </div>
+</main>
 
-</div>
-
-<?php
-$conn->close();
-?>
+<footer>
+    DATAMEX COLLEGE OF SAINT ADELINE
+    &copy; <?= date("Y") ?>
+</footer>
 
 </body>
 </html>
